@@ -61,7 +61,8 @@ class BaseDistiller(nn.Module):
         return startEpoch
         
     def init_tensorboard_logger(self, directory=None):
-        self.logger = Logger(('logs/' + self.currentTime) if directory is None else directory)
+        self.logDir = os.path.join('logs', self.currentTime) if directory is None else directory
+        self.logger = Logger(self.logDir)
         
     def log(self, epoch, metrics):
         """
@@ -78,10 +79,10 @@ class BaseDistiller(nn.Module):
         """
         Save checkpoint of model.
         """
-        folder = os.path.join('checkpoint', directory if directory is not None else self.currentTime)
-        os.makedirs(folder, exist_ok=True)
+        self.checkpointDir = os.path.join('checkpoint', self.currentTime) if directory is None else directory
+        os.makedirs(self.checkpointDir, exist_ok=True)
         torch.save({'epoch': epoch,
                     'student': student.state_dict(),
                     'teacher': teacher.state_dict(),
                     'optimizer': optimizer.state_dict()},
-                   os.path.join(folder, 'checkpoint.pt'))
+                   os.path.join(self.checkpointDir, 'checkpoint.pt'))
