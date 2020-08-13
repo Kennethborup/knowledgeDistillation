@@ -1,7 +1,7 @@
 ![Hinton Knowledge Distillation](/hintonKD.png)
 
 # Knowledge Distillation in PyTorch
-Simple PyTorch implementation of (Hinton) Knowledge Distillation and BaseDistiller class to easily extend to other distillation procedures as well.
+Simple PyTorch implementation of (Hinton) Knowledge Distillation and BaseDistiller class to easily extend to other distillation procedures as well. Knowledge distillation in the sense of Hinton et al. (2015) seek to transfer *knowledge* from a large pretrained model, *teacher*, to a smaller untrained model, *student*. If done correctly, one can obtain performance improvements over student models trained from scratch, and more recent adaptions of the knowledge distillation scheme has examples of students outperforming the teacher. More recent work has introduced different distillation losses, looked at different information to transfer from the teacher, and the size of the student amongst others.
 
 ## Install requirements
 To install the needed requirements in a new conda environment (HKD) use
@@ -63,7 +63,7 @@ for epoch in range(startEpoch, epochs+1):
         distiller.print_epoch(epoch, epochs, trainMetrics)
 ```
 
-To continue a previous run, add the path to the checkpoint and adjust the `epochs` to the total training length. If only some elements from a previous run should be loaded, set the remaining arguments to None in the `.load_state()` call.
+To continue a previous run, add the path to the checkpoint and adjust the `epochs` to the total training length. If only some elements from a previous run should be loaded, set the remaining arguments to `None` in the `.load_state()` call.
 
 
 ## Citation
