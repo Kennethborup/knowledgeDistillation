@@ -55,7 +55,7 @@ class BaseDistiller(nn.Module):
                     student.load_state_dict(state['student'])
                 if teacher is not None:
                     teacher.load_state_dict(state['teacher'])
-                if student is not None:
+                if optimizer is not None:
                     optimizer.load_state_dict(state['optimizer'])
                 
         return startEpoch
