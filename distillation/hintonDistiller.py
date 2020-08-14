@@ -16,7 +16,7 @@ class HintonDistiller(BaseDistiller):
         self.studentHook = Hook()
         self.teacherHook = Hook()
 
-    def train_step(self, epoch, student, teacher, dataloader, objective, distillObjective, optimizer):
+    def train_step(self, student, teacher, dataloader, objective, distillObjective, optimizer, OneHot=False):
         """
         Train student model to the teacher model for one epoch with Hinton KD.
         
@@ -32,7 +32,7 @@ class HintonDistiller(BaseDistiller):
             self._setHook(self.teacherHook, teacher, self.teacherLayer)
 
         device = next(student.parameters()).device
-        accuracy = Accuracy(OH=False)
+        accuracy = Accuracy(OH=OneHot)
         lossMeter = AverageMeter()
         accMeter = AverageMeter()
         
@@ -50,7 +50,7 @@ class HintonDistiller(BaseDistiller):
             # Calculate loss
             optimizer.zero_grad()
             batchLoss = (1-self.alpha)*distillObjective(nn.functional.log_softmax(sAct, dim=1), nn.functional.softmax(tAct, dim=1))
-            batchLoss += self.alpha*objective(nn.functional.log_softmax(sLogits, dim=1), nn.functional.softmax(tLogits, dim=1))
+            batchLoss += self.alpha*objective(nn.functional.log_softmax(sLogits, dim=1), target)
 
             # Update student weights
             batchLoss.backward()

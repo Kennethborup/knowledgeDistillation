@@ -137,4 +137,4 @@ class PseudoDataset(torch.utils.data.Dataset):
         return 10000
 
     def __getitem__(self, index):
-        return torch.rand(self.size), torch.randint(0,10,(1,))
+        return torch.rand(self.size), torch.randint(0,10,())

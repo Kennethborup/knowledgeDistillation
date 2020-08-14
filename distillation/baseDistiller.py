@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from distillation.utils import Logger
+from distillation.utils import Logger, AverageMeter, Accuracy
 from datetime import datetime
 import os
 
@@ -60,8 +60,8 @@ class BaseDistiller(nn.Module):
                 
         return startEpoch
         
-    def init_tensorboard_logger(self, directory=None):
-        self.logDir = os.path.join('logs', self.currentTime) if directory is None else directory
+    def init_tensorboard_logger(self, subDirectory=None):
+        self.logDir = os.path.join('logs', '' if subDirectory is None else subDirectory, self.currentTime) 
         self.logger = Logger(self.logDir)
         
     def log(self, epoch, metrics):
@@ -75,14 +75,44 @@ class BaseDistiller(nn.Module):
             self.logger.add_scalar(name, metric, epoch)
         self.logger.flush()
                 
-    def save(self, epoch, student, teacher, optimizer, directory=None):
+    def save(self, epoch, student, teacher, optimizer, subDirectory=None):
         """
         Save checkpoint of model.
         """
-        self.checkpointDir = os.path.join('checkpoint', self.currentTime) if directory is None else directory
+        self.checkpointDir = os.path.join('checkpoint', '' if subDirectory is None else subDirectory, self.currentTime)
         os.makedirs(self.checkpointDir, exist_ok=True)
         torch.save({'epoch': epoch,
                     'student': student.state_dict(),
                     'teacher': teacher.state_dict(),
                     'optimizer': optimizer.state_dict()},
                    os.path.join(self.checkpointDir, 'checkpoint.pt'))
+        
+    def validate(self, student, dataloader, objective, OneHot=False):
+        """
+        Validate student model on all data in dataloader.
+        
+        :return: dict, named metrics for logging.
+        """
+        student.eval()
+        
+        device = next(student.parameters()).device
+        accuracy = Accuracy(OH=OneHot)
+        lossMeter = AverageMeter()
+        accMeter = AverageMeter()
+        
+        for _, (data, target) in enumerate(dataloader):
+            data, target = data.to(device), target.to(device)
+
+            with torch.no_grad():
+                # Calculate logits
+                sLogits = student(data)
+
+                # Calculate loss
+                batchLoss = objective(nn.functional.log_softmax(sLogits, dim=1), target)
+            
+            # Save metrics
+            lossMeter.update(batchLoss.item(), n=len(data))
+            accMeter.update(accuracy(nn.functional.softmax(sLogits, dim=1), target), n=len(data))
+        
+        return {'Valid/Loss': lossMeter.avg,
+                'Valid/Accuracy': accMeter.avg}

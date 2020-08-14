@@ -22,10 +22,10 @@ from distillation.utils import MLP, PseudoDataset
 # Initialize random models and distiller
 student = MLP(100, 10, 256)
 teacher = MLP(100, 10, 256)
-distiller = HintonDistiller(alpha=0.5, studentLayer=-1, teacherLayer=-1)
+distiller = HintonDistiller(alpha=0.5, studentLayer=-2, teacherLayer=-2)
 
 # Initialize objectives and optimizer
-objective = nn.KLDivLoss(reduction='batchmean')
+objective = nn.CrossEntropyLoss()
 distillObjective = nn.KLDivLoss(reduction='batchmean')
 optimizer = torch.optim.SGD(student.parameters(), lr=0.1)
 
@@ -45,22 +45,27 @@ distiller.init_tensorboard_logger()
 
 for epoch in range(startEpoch, epochs+1):
         # Training step for one full epoch
-        trainMetrics = distiller.train_step(epoch=epoch,
-                                            student=student,
+        trainMetrics = distiller.train_step(student=student,
                                             teacher=teacher,
                                             dataloader=trainloader,
                                             objective=objective,
                                             distillObjective=distillObjective,
                                             optimizer=optimizer)
         
+        # Validation step for one full epoch
+        validMetrics = distiller.validate(student=student,
+                                          dataloader=trainloader,
+                                          objective=objective)
+        metrics = {**trainMetrics, **validMetrics}
+        
         # Log to tensorbard
-        distiller.log(epoch, trainMetrics)
+        distiller.log(epoch, metrics)
 
         # Save model
         distiller.save(epoch, student, teacher, optimizer)
         
         # Print epoch performance
-        distiller.print_epoch(epoch, epochs, trainMetrics)
+        distiller.print_epoch(epoch, epochs, metrics)
 ```
 
 To continue a previous run, add the path to the checkpoint and adjust the `epochs` to the total training length. If only some elements from a previous run should be loaded, set the remaining arguments to `None` in the `.load_state()` call.
