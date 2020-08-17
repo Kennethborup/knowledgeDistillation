@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from distillation.utils import Accuracy, AverageMeter, Hook
 from distillation.baseDistiller import BaseDistiller
-import time
 
 class HintonDistiller(BaseDistiller):
     def __init__(self, alpha, studentLayer=-2, teacherLayer=-2):
@@ -16,7 +15,7 @@ class HintonDistiller(BaseDistiller):
         self.studentHook = Hook()
         self.teacherHook = Hook()
 
-    def train_step(self, student, teacher, dataloader, objective, distillObjective, optimizer, OneHot=False):
+    def train_step(self, student, teacher, dataloader, optimizer, objective, distillObjective, OneHot=False):
         """
         Train student model to the teacher model for one epoch with Hinton KD.
         

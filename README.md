@@ -48,9 +48,9 @@ for epoch in range(startEpoch, epochs+1):
         trainMetrics = distiller.train_step(student=student,
                                             teacher=teacher,
                                             dataloader=trainloader,
+                                            optimizer=optimizer,
                                             objective=objective,
-                                            distillObjective=distillObjective,
-                                            optimizer=optimizer)
+                                            distillObjective=distillObjective)
         
         # Validation step for one full epoch
         validMetrics = distiller.validate(student=student,
@@ -70,10 +70,23 @@ for epoch in range(startEpoch, epochs+1):
 
 To continue a previous run, add the path to the checkpoint and adjust the `epochs` to the total training length. If only some elements from a previous run should be loaded, set the remaining arguments to `None` in the `.load_state()` call.
 
+## Change type of knowledge distillation
+In order to change the type of knowledge distillation, you merely need to change the type of `distiller`. E.g. for Attention Knowledge Distillation on the first and thirds layer change to the following.
+
+```python
+from distillation.attentionDistiller import AttentionDistiller
+distiller = AttentionDistiller(alpha=0.5, studentLayer=[1, 3], teacherLayer=[1, 3])
+```
+
+Note, the following types of knowledge distillation is currently implemented:
+ - Hinton Knowledge Distillation (Hinton et al. (2015))
+ - Attention Knowledge Distillation (Zagoruyko and Komodakis (2016))
+ 
 
 ## Citation
-Remember to cite the original paper by Hinton et al. (2015).
+Remember to cite the original papers:
 
+##### Hinton et. al (2015)
 ```bibtex
 @misc{hinton2015distilling,
     title = {{Distilling the Knowledge in a Neural Network}},
@@ -83,5 +96,16 @@ Remember to cite the original paper by Hinton et al. (2015).
     archivePrefix = {arXiv},
     primaryClass = {stat.ML}
 }
+```
 
+##### Zagoruyko and Komodakis (2016)
+```bibtex
+@misc{zagoruyko2016paying,
+    title = {{Paying More Attention to Attention: Improving the Performance of Convolutional Neural Networks via Attention Transfer}},
+    author = {Zagoruyko, Sergey and Komodakis, Nikos},
+    year = {2016},
+    eprint = {1612.03928},
+    archivePrefix = {arXiv},
+    primaryClass = {cs.CV},
+}
 ```
