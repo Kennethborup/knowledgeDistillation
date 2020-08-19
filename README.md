@@ -11,7 +11,7 @@ conda env create -f environment.yml
 ```
 
 ## Example
-Using the HintonDistiller is straight forward. Provide the usual elements; optimizer, objectives, models etc. and initiate the distiller with a weighting, `alpha`, between the distillation and objective function as well as the layers used for activation matching between student and teacher.
+Using the `HintonDistiller` is straight forward. Provide the usual elements; optimizer, objectives, models etc. and initiate the distiller with a weighting, `alpha`, between the distillation and objective function as well as the layers used for activation matching between student and teacher.
 
 ```python
 import torch
@@ -71,17 +71,75 @@ for epoch in range(startEpoch, epochs+1):
 To continue a previous run, add the path to the checkpoint and adjust the `epochs` to the total training length. If only some elements from a previous run should be loaded, set the remaining arguments to `None` in the `.load_state()` call.
 
 ## Change type of knowledge distillation
-In order to change the type of knowledge distillation, you merely need to change the type of `distiller`. E.g. for Attention Knowledge Distillation on the first and thirds layer change to the following.
+In order to change the type of knowledge distillation, you merely need to change the type of `distiller`. Note, the following types of knowledge distillation is currently implemented:
+ - Hinton Knowledge Distillation (Hinton et al. (2015))
+ - Attention Knowledge Distillation (Zagoruyko and Komodakis (2016))
+ - Data Free Knowledge Distillation or Zero-Shot Knowledge Distillation (Micaelli and Storkey (2019))
+ 
+ For Attention Knowledge Distillation on the first and third layer change to the following.
 
 ```python
 from distillation.attentionDistiller import AttentionDistiller
 distiller = AttentionDistiller(alpha=0.5, studentLayer=[1, 3], teacherLayer=[1, 3])
 ```
 
-Note, the following types of knowledge distillation is currently implemented:
- - Hinton Knowledge Distillation (Hinton et al. (2015))
- - Attention Knowledge Distillation (Zagoruyko and Komodakis (2016))
- 
+Using the `DataFreeDistller` for Data Free Adversarial Knowledge Distillation (aka Zero-Shot Knowledge Distillation) is slightly more involved than e.g. `HintonDistiller` or `AttentionDistiller`. See the below example for usage of the `DataFreeDistiller`.
+
+```python
+import torch
+import torch.nn as nn
+from distillation.datafreeDistiller import DataFreeDistiller
+from distillation.utils import PseudoDataset, CNN
+
+# Initialize random models and distiller
+imgSize = (3, 32, 32)
+student = CNN(imgSize, 64)
+teacher = CNN(imgSize, 64)
+distiller = DataFreeDistiller(generatorIters=3, studentIters=2, generatorLR=1e-3, batchSize=64, noiseDim=100, imgSize=imgSize, resampleRatio=1)
+
+# Initialize objectives and optimizer
+objective = nn.KLDivLoss(reduction='batchmean')
+validObjective = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(student.parameters(), lr=0.1)
+
+# Pseudo dataset and dataloader 
+trainloader = torch.utils.data.DataLoader(
+    PseudoDataset(size=imgSize),
+    batch_size=512,
+    shuffle=True)
+
+# Load state if checkpoint is provided
+checkpoint = None
+startEpoch = distiller.load_state(checkpoint, student, teacher, optimizer)
+epochs = 15
+
+# Construct tensorboard logger
+distiller.init_tensorboard_logger()
+
+for epoch in range(startEpoch, epochs+1):
+        # Training step for one full epoch
+        trainMetrics = distiller.train_step(student=student,
+                                            teacher=teacher,
+                                            dataloader=trainloader,
+                                            optimizer=optimizer,
+                                            objective=objective,
+                                            distillObjective=None)
+        
+        # Validation step for one full epoch
+        validMetrics = distiller.validate(student=student,
+                                          dataloader=trainloader,
+                                          objective=validObjective)
+        metrics = {**trainMetrics, **validMetrics}
+        
+        # Log to tensorbard
+        distiller.log(epoch, metrics)
+
+        # Save model
+        distiller.save(epoch, student, teacher, optimizer)
+        
+        # Print epoch performance
+        distiller.print_epoch(epoch, epochs, metrics)
+```
 
 ## Citation
 Remember to cite the original papers:
@@ -108,4 +166,17 @@ Remember to cite the original papers:
     archivePrefix = {arXiv},
     primaryClass = {cs.CV},
 }
+```
+
+##### Micaelli and Storkey (2019)
+```bibtex
+@misc{micaelli2019zeroshot,
+    title = {{Zero-shot Knowledge Transfer via Adversarial Belief Matching}},
+    author = {Micaelli, Paul and Storkey, Amos},
+    year = {2019},
+    eprint = {1905.09768},
+    archivePrefix = {arXiv},
+    primaryClass = {cs.LG},
+}
+
 ```

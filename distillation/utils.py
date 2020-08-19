@@ -102,7 +102,7 @@ class Accuracy(nn.Module):
 
     
 #####################################
-# For Example
+# For Examples
 #####################################  
 class MLP(nn.Module):
     """
@@ -125,6 +125,76 @@ class MLP(nn.Module):
         x = self.relu(x)
         x = self.l2(x)
         return x
+
+    
+class CNN(nn.Module):
+    """
+    Simple CNN model for data free classification example.
+    
+    :param inputSize: tuple; amount of input nodes
+    :param projectionDim: int; amount of output nodes
+    :param hiddenDim: int; amount of hidden nodes
+    """
+    def __init__(self, inputSize, projectionDim, hiddenDim=32):
+        super(CNN, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=inputSize[0], out_channels=hiddenDim, kernel_size=3, padding=1)
+        self.bn = nn.BatchNorm2d(hiddenDim)
+        self.relu = nn.ReLU(inplace=True)
+        self.l2 = nn.Linear(inputSize[1]*inputSize[2]*hiddenDim, projectionDim)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn(x)
+        x = self.relu(x)
+        x = x.view(x.size(0), -1)
+        x = self.l2(x)
+        return x
+    
+    
+class Generator(nn.Module):
+    """
+    Simple Generator model.
+    
+    :param inputDim: int; amount of input nodes
+    :param imgSize: tuple; size of output images
+    """
+    def __init__(self, inputDim=100, imgSize=(1, 32, 32)):
+        super(Generator, self).__init__()
+        self.outputDims = (imgSize[0], imgSize[1]//4, imgSize[2]//4)
+        
+        self.l1 = nn.Sequential(
+            nn.Linear(inputDim, 128*self.outputDims[1]*self.outputDims[2])
+        )
+
+        self.conv_blocks0 = nn.Sequential(
+            nn.BatchNorm2d(128),
+        )
+        
+        self.conv_blocks1 = nn.Sequential(
+            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True)
+        )
+        
+        self.conv_blocks2 = nn.Sequential(
+            nn.Conv2d(128, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(64, self.outputDims[0], kernel_size=3, stride=1, padding=1),
+            nn.Tanh(),
+            nn.BatchNorm2d(self.outputDims[0], affine=False) 
+        )
+
+    def forward(self, z):
+        img = self.l1(z.view(z.size(0), -1))
+        img = img.view(img.size(0), -1, self.outputDims[1], self.outputDims[2])
+        img = self.conv_blocks0(img)
+        img = nn.functional.interpolate(img, scale_factor=2)
+        img = self.conv_blocks1(img)
+        img = nn.functional.interpolate(img, scale_factor=2)
+        img = self.conv_blocks2(img)
+        return img
+    
     
 class PseudoDataset(torch.utils.data.Dataset):
     """
