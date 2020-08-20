@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
-from distillation.utils import Accuracy, AverageMeter, Hook, Generator
+from distillation.utils import Accuracy, AverageMeter, Hook
 from distillation.baseDistiller import BaseDistiller
 import random
 import os
 
 class DataFreeDistiller(BaseDistiller):
-    def __init__(self, generatorIters, studentIters, generatorLR, batchSize=64, noiseDim=100, imgSize=(3,32,32), resampleRatio=1):
+    def __init__(self, generatorIters, studentIters, generator, generatorLR, batchSize=64, noiseDim=100, resampleRatio=1):
         super(DataFreeDistiller, self).__init__()
         # Training scheme
         self.studentIters = studentIters
@@ -18,8 +18,8 @@ class DataFreeDistiller(BaseDistiller):
         self.noiseDim = noiseDim
         self.pseudoData = None
         
-        # Generator and optimizer XXX
-        self.generator = Generator(self.noiseDim, imgSize)
+        # Generator and optimizer
+        self.generator = generator
         self.generatorOptimizer = torch.optim.SGD(self.generator.parameters(), lr=generatorLR)
         
         # Sampling scheme

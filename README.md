@@ -89,13 +89,20 @@ Using the `DataFreeDistller` for Data Free Adversarial Knowledge Distillation (a
 import torch
 import torch.nn as nn
 from distillation.datafreeDistiller import DataFreeDistiller
-from distillation.utils import PseudoDataset, CNN
+from distillation.utils import PseudoDataset, CNN, Generator
 
 # Initialize random models and distiller
 imgSize = (3, 32, 32)
+noiseDim = 100
 student = CNN(imgSize, 64)
 teacher = CNN(imgSize, 64)
-distiller = DataFreeDistiller(generatorIters=3, studentIters=2, generatorLR=1e-3, batchSize=64, noiseDim=100, imgSize=imgSize, resampleRatio=1)
+distiller = DataFreeDistiller(generatorIters=3,
+                              studentIters=2,
+                              generator=Generator(noiseDim, imgSize),
+                              generatorLR=1e-3,
+                              batchSize=64,
+                              noiseDim=noiseDim,
+                              resampleRatio=1)
 
 # Initialize objectives and optimizer
 objective = nn.KLDivLoss(reduction='batchmean')
@@ -103,7 +110,7 @@ validObjective = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(student.parameters(), lr=0.1)
 
 # Pseudo dataset and dataloader 
-trainloader = torch.utils.data.DataLoader(
+validloader = torch.utils.data.DataLoader(
     PseudoDataset(size=imgSize),
     batch_size=512,
     shuffle=True)
@@ -120,14 +127,14 @@ for epoch in range(startEpoch, epochs+1):
         # Training step for one full epoch
         trainMetrics = distiller.train_step(student=student,
                                             teacher=teacher,
-                                            dataloader=trainloader,
+                                            dataloader=None,
                                             optimizer=optimizer,
                                             objective=objective,
                                             distillObjective=None)
         
         # Validation step for one full epoch
         validMetrics = distiller.validate(student=student,
-                                          dataloader=trainloader,
+                                          dataloader=validloader,
                                           objective=validObjective)
         metrics = {**trainMetrics, **validMetrics}
         
