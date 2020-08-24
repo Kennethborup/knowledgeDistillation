@@ -4,7 +4,7 @@
 Simple PyTorch implementation of (Hinton) Knowledge Distillation and BaseDistiller class to easily extend to other distillation procedures as well. Knowledge distillation in the sense of Hinton et al. (2015) seek to transfer *knowledge* from a large pretrained model, *teacher*, to a smaller untrained model, *student*. If done correctly, one can obtain performance improvements over student models trained from scratch, and more recent adaptions of the knowledge distillation scheme has examples of students outperforming the teacher. More recent work has introduced different distillation losses, looked at different information to transfer from the teacher, and the size of the student amongst others.
 
 ## Install requirements
-To install the needed requirements in a new conda environment (HKD) use
+To install the needed requirements in a new conda environment (KD) use
 
 ```bash
 conda env create -f environment.yml
@@ -146,6 +146,18 @@ for epoch in range(startEpoch, epochs+1):
         
         # Print epoch performance
         distiller.print_epoch(epoch, epochs, metrics)
+```
+
+For `DatasetDistiller`, no generator is used, but a fixed set of samples is changed through SGD to maximise the loss. It can be used with an optional `scaler` to rescale the samples to some fixed interval.
+```python
+from distillation.datasetDistiller import DatasetDistiller
+from distillation.utils import SigmoidScaler
+distiller = DatasetDistiller(pseudoIters=3,
+                             studentIters=2,
+                             pseudoLR=1e-1,
+                             scaler=SigmoidScaler((0,1)),
+                             batchSize=64,
+                             pseudoSize=imgSize)
 ```
 
 ## Citation
