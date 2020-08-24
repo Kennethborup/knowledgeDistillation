@@ -208,3 +208,27 @@ class PseudoDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         return torch.rand(self.size), torch.randint(0,10,())
+    
+    
+# Scalewrapper
+class ScaleWrapper(nn.Module):
+    def __init__(self, interval):
+        super(ScaleWrapper, self).__init__()
+        
+    def _scaler(self, x):
+        raise NotImplementedError('_scaler should be implemented in descendent of ScaleWrap class!')
+        
+    def __call__(self, x):        
+        # Apply scaler and return to interval scale.
+        return (self.interval[1]-self.interval[0])*self._scaler(x) + self.interval[0]
+        
+class SigmoidScaler(ScaleWrapper):
+    def __init__(self, interval, p=2.463):
+        super(SigmoidScaler, self).__init__(interval)
+        self.p = p
+        self.interval = interval
+        self.scale = (self.interval[1] - self.interval[0])/2
+        self.center = (self.interval[0] + self.interval[1])/2
+        
+    def _scaler(self, x):
+        return torch.sigmoid(self.p/self.scale * (x - self.center))
