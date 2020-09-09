@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard.summary import hparams
+import numpy as np
 
 #####################################
 # Misc.
@@ -100,6 +101,51 @@ class Accuracy(nn.Module):
         
         return pred.eq(target.view_as(pred)).float().mean().item()
 
+
+#####################################
+# Teacher weight annealing
+#####################################
+class TeacherAnnealing(object):
+    """
+    Updates the (1-alpha)-weight for knowledge distillation according to CosineAnnealing
+    \eta_t = \eta_{min} + \frac{1}{2}(\eta_{max} -
+        \eta_{min})\left(1 + \cos\left(\frac{T_{cur}}{T_{max}}\pi\right)\right)
+    """
+    def __init__(self, distiller, endVal, epochs):
+        """
+        Args:
+            distiller: distiller to update. Must have alpha attribute
+            endVal: val to anneal to in èpochs` iterations
+            epochs: amouint of iterations to reach `endVal`
+        """
+        self.distiller = distiller
+        self.etaMax = self.distiller.alpha
+        self.etaMin = endVal
+        self.tMax = epochs
+        self.tCur = 0
+        
+    def reset(self):
+        self.tCur = 0
+        self.distiller.alpha = self.etaMax
+    
+    def step(self):
+        self.tCur += 1
+        self.distiller.alpha = 1-(self.etaMin + 0.5*(self.etaMax - self.etaMin)*(1 + torch.cos(self.tCur/self.tMax * torch.tensor(np.pi))))
+        
+    def get_val(self):
+        return self.distiller.alpha
+
+    
+#####################################
+# Custom loss function
+#####################################
+class FocalKLD(object):
+    """Focal-like weighting of KLD"""
+    def __call__(self, yTrue, yStudent, yTeacher):
+        weights = yTeacher[torch.arange(yTeacher.size(0)), yTrue]
+        kld = torch.nn.functional.kl_div(yTeacher, yStudent, reduction='none')
+        return torch.sum(weights.unsqueeze(1)*kld, axis=1).mean()
+    
     
 #####################################
 # For Examples
